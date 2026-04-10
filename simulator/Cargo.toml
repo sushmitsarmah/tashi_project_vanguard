@@ -1,0 +1,14 @@
+[package]
+name = "simulator"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+# Add these below for the crates that need them:
+reqwest = { workspace = true }
+axum = { workspace = true }
+chrono = { workspace = true }
+rand = { workspace = true }
