@@ -16,3 +16,11 @@ bincode = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }
 tashi-vertex = { workspace = true }
+
+[[bin]]
+name = "warmup"
+path = "src/bin/warmup.rs"
+
+[[bin]]
+name = "gen_warmup_config"
+path = "src/bin/gen_warmup_config.rs"
