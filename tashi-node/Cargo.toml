@@ -13,4 +13,6 @@ axum = { workspace = true }
 chrono = { workspace = true }
 rand = { workspace = true }
 bincode = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
 tashi-vertex = "0.13.0"

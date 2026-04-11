@@ -13,7 +13,7 @@ const CITY_MIN_LAT: f64 = 34.0000;
 const CITY_MAX_LAT: f64 = 34.1500;
 const CITY_MIN_LON: f64 = -118.3000;
 const CITY_MAX_LON: f64 = -118.1500;
-const FLEET_SIZE: usize = 1000;
+const FLEET_SIZE: usize = 10;
 
 // --- Geotab Mock Schemas ---
 #[derive(Deserialize, Debug)]
