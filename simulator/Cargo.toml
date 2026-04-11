@@ -12,3 +12,4 @@ reqwest = { workspace = true }
 axum = { workspace = true }
 chrono = { workspace = true }
 rand = { workspace = true }
+tashi-vertex = { workspace = true }
