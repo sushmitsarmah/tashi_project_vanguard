@@ -48,13 +48,6 @@
         import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 
         // ---------- Consensus feed config ----------
-        // Point this at whichever tashi node you want to observe. All nodes
-        // should return the same state — that's the whole point. To demo
-        // consensus, open multiple browser windows each targeting a different
-        // node (9001, 9002, 9003, …) and confirm they stay in sync.
-        // const NODE_URL = 'http://127.0.0.1:9001/state';
-
-        // ---------- Consensus feed config ----------
         const urlParams = new URLSearchParams(window.location.search);
         let port = 9001; // Default port
 
@@ -143,6 +136,16 @@
         globalCam.position.set(0, 90, 110);
         globalCam.lookAt(0, 10, 0);
 
+        // ---------- Survivors ----------
+        const survivorGeo = new THREE.SphereGeometry(1.5, 16, 16);
+        const survivorMat = new THREE.MeshStandardMaterial({
+            color: 0x32d74b, // Terminal Green
+            emissive: 0x32d74b, 
+            emissiveIntensity: 2.5
+        });
+        // We use a Map to track them by device_id so we don't spawn duplicates
+        const activeSurvivors = new Map(); 
+
         // ---------- Drones ----------
         const droneGeo = new THREE.ConeGeometry(0.5, 2, 4);
         droneGeo.rotateX(-Math.PI / 2);
@@ -212,7 +215,9 @@
                 const res = await fetch(NODE_URL);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const json = await res.json();
+                
                 const records = json.drones || [];
+                const survivorRecords = json.survivors || []; // Catch survivor data
 
                 feed.online = true;
                 feed.lastPollMs = performance.now();
@@ -235,6 +240,28 @@
                     d.serverId = rec.id;
                     d.publicKey = rec.publicKeyHex;
                 });
+
+                // Update Survivors
+                survivorRecords.forEach(rec => {
+                    // If this is a new ping we haven't rendered yet
+                    if (!activeSurvivors.has(rec.device_id)) {
+                        const mesh = new THREE.Mesh(survivorGeo, survivorMat);
+                        const { x, z } = latLonToWorld(rec.lat, rec.lon);
+                        mesh.position.set(x, 2, z); // Sit slightly above the rubble
+                        
+                        // Add a bright green light shining on the rubble around them
+                        const light = new THREE.PointLight(0x32d74b, 3.0, 40);
+                        mesh.add(light);
+                        
+                        scene.add(mesh);
+                        activeSurvivors.set(rec.device_id, {
+                            mesh,
+                            lat: rec.lat,
+                            lon: rec.lon
+                        });
+                    }
+                });
+
             } catch (e) {
                 feed.online = false;
                 console.warn('Node poll failed:', e.message);
@@ -271,6 +298,12 @@
                 d.beacon.intensity = 1.0 + Math.sin(t * 6 + i) * 0.8;
             });
 
+            // Animate Survivor Beacons (Pulsing effect)
+            activeSurvivors.forEach(survivor => {
+                const scale = 1.0 + Math.sin(t * 8) * 0.4;
+                survivor.mesh.scale.set(scale, scale, scale);
+            });
+
             // ---------- Telemetry HUD ----------
             const ageSec = ((performance.now() - feed.lastPollMs) / 1000).toFixed(1);
             const statusClass = feed.online ? 'status-ok' : 'status-bad';
@@ -284,6 +317,16 @@
             if (feed.analyst) {
                 rows += `<div class="analyst">🧠 ${feed.analyst}</div>`;
             } else {
+                rows += `<br>`;
+            }
+
+            // Print SOS signals to HUD
+            if (activeSurvivors.size > 0) {
+                rows += `<br><span style="color:#32d74b;"><b>[ URGENT: SURVIVORS LOCATED (${activeSurvivors.size}) ]</b></span><br>`;
+                activeSurvivors.forEach((s, id) => {
+                    const shortId = id.replace("survivor_", "").slice(0, 6);
+                    rows += `<span style="color:#32d74b;">SOS ➔ ID:${shortId} | LAT ${s.lat.toFixed(5)} LON ${s.lon.toFixed(5)}</span><br>`;
+                });
                 rows += `<br>`;
             }
 

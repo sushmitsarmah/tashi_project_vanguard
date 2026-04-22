@@ -1,9 +1,6 @@
 // src/state_server.rs
 //
 // Per-node read-only HTTP endpoint exposing consensus-confirmed state.
-// An external viewer (three.js HUD, CLI tool, whatever) can GET /state and see
-// what THIS node believes the swarm state is. Point viewers at different nodes
-// to prove everyone's agreeing.
 
 use axum::{extract::State, routing::get, Json, Router};
 use serde::Serialize;
@@ -12,13 +9,14 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tower_http::cors::CorsLayer;
 
-use crate::LogRecord;
+use crate::{LogRecord, SurvivorPing}; // Added SurvivorPing import
 
 /// Shared per-node state. Cheap to clone (all handles are Arc).
 #[derive(Clone)]
 pub struct NodeState {
     pub node_id: u16,
     drones: Arc<RwLock<HashMap<String, LogRecord>>>,
+    survivors: Arc<RwLock<HashMap<String, SurvivorPing>>>, // NEW
     analyst: Arc<Mutex<Option<String>>>,
 }
 
@@ -27,6 +25,7 @@ impl NodeState {
         Self {
             node_id,
             drones: Arc::new(RwLock::new(HashMap::new())),
+            survivors: Arc::new(RwLock::new(HashMap::new())), // NEW
             analyst: Arc::new(Mutex::new(None)),
         }
     }
@@ -37,6 +36,14 @@ impl NodeState {
             .write()
             .await
             .insert(rec.public_key_hex.clone(), rec);
+    }
+
+    /// Call this when a survivor ping clears consensus.
+    pub async fn apply_survivor(&self, ping: SurvivorPing) { // NEW
+        self.survivors
+            .write()
+            .await
+            .insert(ping.device_id.clone(), ping);
     }
 
     /// Hand this Arc to the analyst task so it can publish its latest summary.
@@ -50,19 +57,26 @@ impl NodeState {
 struct StateSnapshot {
     node_id: u16,
     drones: Vec<LogRecord>,
+    survivors: Vec<SurvivorPing>, // NEW
     analyst: Option<String>,
 }
 
 async fn get_state(State(s): State<NodeState>) -> Json<StateSnapshot> {
     let drones_guard = s.drones.read().await;
+    let survivors_guard = s.survivors.read().await; // NEW
     let analyst_guard = s.analyst.lock().await;
-    // Sort by pubkey so clients mapping pubkey → slot index get a stable order
-    // across polls AND across nodes.
+    
     let mut drones: Vec<LogRecord> = drones_guard.values().cloned().collect();
     drones.sort_by(|a, b| a.public_key_hex.cmp(&b.public_key_hex));
+
+    // Sort survivors by ID for stable payload output
+    let mut survivors: Vec<SurvivorPing> = survivors_guard.values().cloned().collect(); // NEW
+    survivors.sort_by(|a, b| a.device_id.cmp(&b.device_id));
+
     Json(StateSnapshot {
         node_id: s.node_id,
         drones,
+        survivors, // NEW
         analyst: analyst_guard.clone(),
     })
 }

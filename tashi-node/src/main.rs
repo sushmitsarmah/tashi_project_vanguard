@@ -118,7 +118,6 @@ async fn main() -> anyhow::Result<()> {
 
         let addr = SocketAddr::from(([0, 0, 0, 0], captive_port));
         println!("📡 Captive Portal active on http://127.0.0.1:{}", captive_port);
-        // axum::Server::bind(&addr).serve(app.into_make_service()).await.unwrap();
         let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
         axum::serve(listener, app).await.unwrap();
     });
@@ -199,6 +198,11 @@ async fn main() -> anyhow::Result<()> {
                                     }
                                     SwarmMessage::SurvivorLocated(ping) => {
                                         println!("✅ [CONSENSUS] Survivor Verified: {} at {}, {}", ping.device_id, ping.lat, ping.lon);
+                                        
+                                        // --- UPDATED: Pass data to state_server for HUD visualization ---
+                                        node_state.apply_survivor(ping.clone()).await;
+                                        // ----------------------------------------------------------------
+
                                         let ping_bytes = serde_json::to_vec(&ping).unwrap();
                                         if let Ok(write_txn) = db.begin_write() {
                                             if let Ok(mut table) = write_txn.open_table(SURVIVOR_LOCATIONS) {
