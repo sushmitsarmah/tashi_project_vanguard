@@ -1,12 +1,17 @@
-# 🌍 Decentralized Swarm Telemetry (Geotab + Tashi Network)
+# 🌍 Project Vanguard: Autonomous SAR Swarm (Tashi Network + Edge AI)
 
-A high-performance Rust workspace that simulates a massive fleet of autonomous vehicles (drones, trucks, or cars) navigating a configurable urban grid. It broadcasts their real-time telemetry into a decentralized, Byzantine Fault-Tolerant (BFT) consensus network.
+A high-performance Rust workspace that simulates a massive fleet of autonomous Search and Rescue (SAR) drones navigating a configurable urban grid. It broadcasts their real-time telemetry, local AI decisions, and survivor location pings into a decentralized, Byzantine Fault-Tolerant (BFT) consensus network.
 
 This project bridges traditional enterprise telematics (using the Geotab JSON-RPC standard) with next-generation Decentralized Physical Infrastructure Networks (DePIN) powered by the **Tashi Vertex** DAG consensus engine. It is designed to be geographically agnostic and can be deployed to simulate activity in any city or country worldwide.
 
 ---
 
-## 🎬 Demo
+## 🎬 Live Links & Demos
+
+* 🌐 **Live Website:** [Project Vanguard Dashboard](https://rad-faloodeh-be43dc.netlify.app/)
+
+**Product Demo Video**
+[![Project Vanguard Demo](https://img.youtube.com/vi/jzOq2FaPGJk/maxresdefault.jpg)](https://youtu.be/jzOq2FaPGJk)
 
 **P2P Warm-up — Discovery, Heartbeats & State Replication**
 [![P2P Warm-up Demo](https://img.youtube.com/vi/GGLbCZIoI08/maxresdefault.jpg)](https://youtu.be/GGLbCZIoI08)
@@ -17,13 +22,12 @@ This project bridges traditional enterprise telematics (using the Geotab JSON-RP
 
 ## 🏗️ Architecture Overview
 
-This repository is structured as a Cargo Workspace containing three distinct services:
+This repository is structured as a Cargo Workspace containing the following distinct services:
 
-1. **`city-swarm-simulator` (The Firehose):** An asynchronous physics engine that calculates vector-based movement for 1,000 active nodes bounded within a configurable geographical grid. It exposes an HTTP mock API that perfectly mimics the **MyGeotab `GetFeed`** enterprise polling standard, serving `LogRecord` (GPS) data in real-time.
-
-2. **`tashi-node` (The Consensus Middleware):** An edge node that bridges the centralized API into a decentralized swarm. It continuously polls the Geotab simulator, serializes the telemetry payloads using `bincode`, and submits them as memory-safe transactions into the **Tashi Vertex DAG**. This ensures all vehicle movements are cryptographically ordered and synchronized across the network in under 100 milliseconds.
-
-3. **`warmup` (The P2P Primitives Demo):** A standalone two-agent demo that proves the core P2P coordination primitives — discovery, signed handshakes, heartbeats, replicated state, and failure recovery — independently of the full swarm simulation.
+1. **`city-swarm-simulator` (The Firehose):** An asynchronous physics engine that calculates vector-based movement for active nodes bounded within a configurable geographical grid. It exposes an HTTP mock API that perfectly mimics the **MyGeotab `GetFeed`** enterprise polling standard, serving `LogRecord` (GPS) data in real-time.
+2. **`tashi-node` (The Consensus Middleware & Mesh Bridge):** An edge node that bridges the centralized API into a decentralized swarm. It continuously polls the Geotab simulator, serializes the telemetry payloads using `bincode`, and submits them as memory-safe transactions into the **Tashi Vertex DAG**. This ensures all vehicle movements are cryptographically ordered and synchronized across the network in under 100 milliseconds. **Crucially, this node also runs a local AI agent to process telemetry and broadcasts a dual-radio Wi-Fi captive portal**. This mesh network allows survivors to connect with their smartphones and ping their coordinates directly into the DAG without any app downloads.
+3. **`state_server` & Edge Persistence:** Using an embedded `redb` database, the swarm maintains crash-proof state persistence for both autonomous telemetry and survivor SOS beacons, ensuring total resilience in cloud-denied dark zones.
+4. **`warmup` (The P2P Primitives Demo):** A standalone demo that proves the core P2P coordination primitives independently of the full swarm simulation.
 
 ---
 
@@ -31,12 +35,11 @@ This repository is structured as a Cargo Workspace containing three distinct ser
 
 Before building the project, ensure you have the following installed:
 
-- **Rust & Cargo** (Edition 2024 recommended)
+* **Rust & Cargo** (Edition 2024 recommended)
   ```bash
-  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+  curl --proto '=https' --tlsv1.2 -sSf [https://sh.rustup.rs](https://sh.rustup.rs) | sh
   ```
-
-- **CMake** — required to compile the underlying C-core of the Tashi Vertex engine.
+* **CMake** — required to compile the underlying C-core of the Tashi Vertex engine.
   ```bash
   # macOS
   brew install cmake
@@ -72,12 +75,13 @@ cargo build --workspace --release
 
 ### 3. Initialize the Swarm Configuration
 
-Run the simulator first. On its initial boot, it will generate a swarm_config.json in the workspace root. This file contains the unique cryptographic identities (Ed25519) and port assignments for all 5 nodes.
+Run the simulator first. On its initial boot, it will generate a `swarm_config.json` in the workspace root. This file contains the unique cryptographic identities (Ed25519) and port assignments for all 5 nodes.
 
-Bash
-#### Terminal 1
-    cargo run --bin city-swarm-simulator
-    Wait for the message: === 1. GENERATING NEW SWARM CONFIG ===
+```bash
+# Terminal 1
+cargo run --bin city-swarm-simulator
+# Wait for the message: === 1. GENERATING NEW SWARM CONFIG ===
+```
 
 ### 4. Launch the Tashi Peer Network
 
@@ -85,22 +89,25 @@ Tashi Vertex requires a Byzantine Fault-Tolerant (BFT) quorum to process data. F
 
 Open 3 to 5 additional terminals and launch the peers by their ID:
 
-Bash
-#### Terminal 2
-    cargo run --bin tashi-node -- --id 1
+```bash
+# Terminal 2
+cargo run --bin tashi-node -- --id 1
 
-#### Terminal 3
-    cargo run --bin tashi-node -- --id 2
+# Terminal 3
+cargo run --bin tashi-node -- --id 2
 
-#### Terminal 4 (Quorum reached here!)
-    cargo run --bin tashi-node -- --id 3
+# Terminal 4 (Quorum reached here!)
+cargo run --bin tashi-node -- --id 3
+```
 
-### 5. Verify Consensus
+### 5. Verify Consensus & Survivor Mesh
 
 Once the 3rd node joins, all terminals will begin streaming finalized telemetry logs:
-🔒 [CONSENSUS] Drone: ...vGhYxYyq | Lat: 34.05185 | Lon: -118.27685 | TS: 177588822
+`🔒 [CONSENSUS] Drone: ...vGhYxYyq | Lat: 34.05185 | Lon: -118.27685 | TS: 177588822`
 
 You should see the node initialize its cryptographic identity, bind its sockets, and begin submitting hundreds of telemetry transactions per second into the network.
+
+**To test the Survivor Captive Portal:** Open a browser and navigate to the node's local port (e.g., `http://127.0.0.1:8001`) to interact with the Wi-Fi rescue mesh and inject a location ping into the swarm.
 
 ---
 
@@ -130,7 +137,7 @@ cargo run --bin gen_warmup_config
 
 This writes `warmup_config.json` to the workspace root with new keypairs on ports `9001–9003`.
 
-**Step 2 — Open 3 terminal windows and start all nodes:**
+**Step 2 — Open 3 terminal windows and start all nodes**:
 
 ```bash
 # Terminal 1 — Agent A (triggers role toggle at t=20s)
@@ -145,7 +152,7 @@ cargo run --bin warmup -- --id 3 --config warmup_config --silent
 
 Once all three are running you will see consensus form and the handshake sequence begin:
 
-```
+```text
 🌐  [CONNECTED]  Consensus formed — broadcasting Hello
    ↳ 🤝 [HELLO] Sent │ role: Carrier │ status: Ready
 🤝  [HELLO]        Peer …Ty4gx4wE │ role: Scout │ status: Ready │ msg age 31ms
@@ -176,3 +183,4 @@ cargo run --bin warmup -- --id 3 --config warmup_config --silent
 | `--toggle-after` | `20` | Seconds before Agent A toggles its role. Set `0` to disable. |
 | `--stale-secs` | `8` | Seconds of silence before a peer is flagged stale |
 | `--silent` | off | Participate in consensus without demo output (use for Node 3) |
+```
