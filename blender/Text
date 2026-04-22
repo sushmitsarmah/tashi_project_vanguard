@@ -1,0 +1,131 @@
+import bpy
+import random
+
+def clear_scene():
+    """Deletes all mesh objects in the current scene."""
+    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.delete()
+
+def create_material(name, r, g, b):
+    """Creates a simple colored material."""
+    mat = bpy.data.materials.new(name=name)
+    mat.use_nodes = True
+    bsdf = mat.node_tree.nodes["Principled BSDF"]
+    bsdf.inputs['Base Color'].default_value = (r, g, b, 1.0)
+    # Add a little roughness and metallic feel for the city
+    bsdf.inputs['Roughness'].default_value = 0.6
+    bsdf.inputs['Metallic'].default_value = 0.2
+    return mat
+
+def generate_procedural_city():
+    clear_scene()
+
+    # --- 1. Setup Materials ---
+    mat_sea = create_material("Mat_Sea", 0.05, 0.2, 0.4)
+    mat_ground = create_material("Mat_Concrete", 0.2, 0.2, 0.2)
+    mat_park = create_material("Mat_Park", 0.1, 0.35, 0.1)
+    mat_building = create_material("Mat_Building", 0.4, 0.45, 0.5)
+    mat_empire = create_material("Mat_Empire", 0.8, 0.8, 0.8)
+    mat_bridge = create_material("Mat_Bridge", 0.5, 0.15, 0.15)
+
+    # --- 2. Create the Sea ---
+    bpy.ops.mesh.primitive_plane_add(size=2000, location=(0, 0, 0))
+    sea = bpy.context.active_object
+    sea.name = "The_Sea"
+    sea.data.materials.append(mat_sea)
+
+    # --- 3. Create the Island Base ---
+    island_width = 400
+    island_length = 800
+    island_height = 4
+    
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 0, island_height / 2))
+    island = bpy.context.active_object
+    island.name = "Manhattan_Island"
+    island.scale = (island_width, island_length, island_height)
+    island.data.materials.append(mat_ground)
+
+    # --- 4. Create Central Park ---
+    park_width = 120
+    park_length = 250
+    # Place it in the upper-middle of the island, slightly raised so it doesn't z-fight
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(0, 150, island_height + 0.1))
+    park = bpy.context.active_object
+    park.name = "Central_Park"
+    park.scale = (park_width, park_length, 0.2)
+    park.data.materials.append(mat_park)
+
+    # --- 5. Generate the City Grid ---
+    block_spacing = 35
+    grid_x_range = int((island_width / 2) / block_spacing)
+    grid_y_range = int((island_length / 2) / block_spacing)
+    
+    empire_state_built = False
+
+    # Loop through grid coordinates
+    for x in range(-grid_x_range, grid_x_range):
+        for y in range(-grid_y_range, grid_y_range):
+            
+            pos_x = x * block_spacing
+            pos_y = y * block_spacing
+            
+            # Keep buildings slightly away from the absolute edge of the island
+            if abs(pos_x) > (island_width/2 - 20) or abs(pos_y) > (island_length/2 - 20):
+                continue
+
+            # Leave empty space for Central Park
+            if abs(pos_x) < (park_width / 2 + 10) and (150 - park_length/2) < pos_y < (150 + park_length/2):
+                continue
+
+            # Randomize building footprints and heights
+            b_width = random.uniform(12, 24)
+            b_depth = random.uniform(12, 24)
+            b_height = random.uniform(30, 150)
+            current_mat = mat_building
+
+            # Inject the "Empire State Building" at a specific coordinate
+            if not empire_state_built and x == 0 and y == -4:
+                b_width, b_depth, b_height = 35, 35, 450
+                current_mat = mat_empire
+                empire_state_built = True
+                
+            # Randomly skip a few blocks for variety/plazas
+            elif random.random() < 0.1:
+                continue
+
+            # Calculate Z position so it rests exactly on the island
+            pos_z = island_height + (b_height / 2)
+
+            # Spawn the building
+            bpy.ops.mesh.primitive_cube_add(size=1, location=(pos_x, pos_y, pos_z))
+            building = bpy.context.active_object
+            building.name = f"Building_{x}_{y}"
+            building.scale = (b_width, b_depth, b_height)
+            building.data.materials.append(current_mat)
+
+    # --- 6. Generate the Bridge (Connecting Eastward) ---
+    bridge_x = island_width / 2 + 150
+    bridge_y = -100
+    bridge_z = 50
+    
+    # Bridge Deck
+    bpy.ops.mesh.primitive_cube_add(size=1, location=(bridge_x, bridge_y, bridge_z))
+    deck = bpy.context.active_object
+    deck.name = "Bridge_Deck"
+    deck.scale = (350, 30, 3)
+    deck.data.materials.append(mat_bridge)
+    
+    # Bridge Pillars
+    for p_x in [bridge_x - 100, bridge_x + 100]:
+        bpy.ops.mesh.primitive_cube_add(size=1, location=(p_x, bridge_y, bridge_z / 2))
+        pillar = bpy.context.active_object
+        pillar.name = f"Bridge_Pillar_{int(p_x)}"
+        pillar.scale = (15, 35, bridge_z + 20)
+        pillar.data.materials.append(mat_bridge)
+
+    # Deselect all when done
+    bpy.ops.object.select_all(action='DESELECT')
+    print("Procedural City Generated Successfully!")
+
+# Run the generator
+generate_procedural_city()

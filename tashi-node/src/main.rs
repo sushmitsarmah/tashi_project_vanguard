@@ -1,3 +1,11 @@
+mod analyst;
+mod state_server;
+
+use analyst::{AnalystBuffer, run_analyst};
+use std::sync::Arc;
+use tokio::sync::Mutex as TokioMutex;
+use std::time::Duration;
+
 use clap::Parser;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -89,6 +97,23 @@ async fn main() -> anyhow::Result<()> {
     println!("🌐 Starting Node {} [Port: {} | PubKey: {}...]", my_config.id, my_config.port, &my_config.public_key[pk_len - 8..]);
     let engine = Engine::start(context, socket, options, secret, peers, false)?;
 
+    let node_state = state_server::NodeState::new(my_config.id);
+    {
+        let ns = node_state.clone();
+        let http_port = 9000 + my_config.id;
+        tokio::spawn(async move { state_server::serve(ns, http_port).await });
+    }
+
+    let analyst_buf = Arc::new(TokioMutex::new(AnalystBuffer::new(256)));
+    {
+        let ab = analyst_buf.clone();
+        let id = my_config.id;
+        let analyst_slot = node_state.analyst_slot();
+        tokio::spawn(async move {
+            run_analyst(ab, Some(analyst_slot), id, Duration::from_secs(15), "llama3.2:1b").await;
+        });
+    }
+
     let http_client = Client::new();
     let mut last_version = "0".to_string();
 
@@ -104,6 +129,10 @@ async fn main() -> anyhow::Result<()> {
                             "🔒 [CONSENSUS] Drone: {}... | Lat: {:.5} | Lon: {:.5} | TS: {}",
                             &log.public_key_hex[log_len - 8..], log.latitude, log.longitude, event.consensus_at()
                         );
+                        // Publish to the read-only state endpoint
+                        node_state.apply_telemetry(log.clone()).await;
+                        // feed the analyst buffer from consensus, not from raw polling.
+                        analyst_buf.lock().await.push(event.consensus_at(), log);
                     }
                 }
                 poll_geotab_and_filter(&engine, &http_client, &mut last_version, &my_config.public_key).await;

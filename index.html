@@ -1,0 +1,1046 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Project Vanguard — Compute at the Edge. Consensus in the Mesh.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0A0C;
+    --bg-2:#0E0E11;
+    --panel:rgba(20,20,24,.55);
+    --panel-solid:#121216;
+    --line:rgba(255,255,255,.06);
+    --line-2:rgba(255,255,255,.10);
+    --text:#E8E8EC;
+    --text-dim:#8A8A93;
+    --text-faint:#5A5A63;
+    --orange:#FF4500;
+    --orange-glow:rgba(255,69,0,.35);
+    --green:#32D74B;
+    --green-glow:rgba(50,215,75,.35);
+    --red:#FF3B30;
+    --amber:#FFB020;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-smoothing:antialiased}
+  body{
+    background:
+      radial-gradient(1200px 700px at 85% -10%, rgba(255,69,0,.08), transparent 60%),
+      radial-gradient(900px 600px at -10% 40%, rgba(50,215,75,.04), transparent 60%),
+      linear-gradient(180deg,#09090B 0%,#0A0A0C 100%);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+  .grid-bg{
+    position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse 1200px 800px at 50% 20%, black 40%, transparent 85%);
+  }
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-feature-settings:"ss01","ss02"}
+  .wrap{max-width:1280px;margin:0 auto;padding:0 32px;position:relative;z-index:1}
+
+  /* ——— NAV ——— */
+  nav.topnav{
+    position:sticky;top:0;z-index:50;
+    backdrop-filter: blur(12px);-webkit-backdrop-filter:blur(12px);
+    background:rgba(10,10,12,.65);
+    border-bottom:1px solid var(--line);
+  }
+  nav.topnav .inner{display:flex;align-items:center;justify-content:space-between;padding:14px 32px;max-width:1280px;margin:0 auto}
+  .brand{display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-weight:500;letter-spacing:.02em;font-size:13px}
+  .brand .mark{width:22px;height:22px;position:relative}
+  .brand .mark svg{display:block}
+  .brand-meta{color:var(--text-dim);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+  .nav-links{display:flex;gap:28px;align-items:center}
+  .nav-links a{color:var(--text-dim);text-decoration:none;font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;transition:color .2s}
+  .nav-links a:hover{color:var(--text)}
+  .status-pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line-2);padding:6px 10px;border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim)}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green-glow);animation:pulse 2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.55;transform:scale(.85)}}
+
+  /* ——— HERO ——— */
+  section.hero{padding:96px 0 80px;position:relative}
+  .eyebrow{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line-2);background:rgba(255,255,255,.02);padding:6px 12px;border-radius:999px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase}
+  .eyebrow .tick{width:4px;height:4px;border-radius:50%;background:var(--orange);box-shadow:0 0 8px var(--orange-glow)}
+  h1.headline{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:clamp(40px,6vw,80px);
+    line-height:1.02;
+    letter-spacing:-.03em;
+    margin:24px 0 20px;
+    text-wrap:balance;
+  }
+  h1.headline .accent{color:var(--orange)}
+  p.sub{font-size:18px;line-height:1.55;color:var(--text-dim);max-width:640px;margin:0 0 32px;text-wrap:pretty}
+  .cta-row{display:flex;gap:14px;flex-wrap:wrap}
+  .btn{
+    display:inline-flex;align-items:center;gap:10px;
+    padding:14px 22px;border-radius:6px;
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;
+    text-decoration:none;cursor:pointer;border:1px solid transparent;transition:all .2s;
+  }
+  .btn-primary{
+    background:var(--orange);color:#0a0a0c;
+    box-shadow:0 0 0 1px rgba(255,69,0,.4), 0 10px 40px -10px rgba(255,69,0,.6), inset 0 1px 0 rgba(255,255,255,.25);
+  }
+  .btn-primary:hover{transform:translateY(-1px);box-shadow:0 0 0 1px rgba(255,69,0,.6), 0 18px 50px -10px rgba(255,69,0,.75), inset 0 1px 0 rgba(255,255,255,.3)}
+  .btn-secondary{background:transparent;color:var(--text);border:1px solid var(--line-2)}
+  .btn-secondary:hover{border-color:rgba(255,255,255,.25);background:rgba(255,255,255,.03)}
+  .btn svg{width:12px;height:12px}
+
+  .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+  @media (max-width:980px){.hero-grid{grid-template-columns:1fr;gap:40px}}
+
+  /* mesh visualization */
+  .mesh-frame{
+    position:relative;aspect-ratio:1/1;border:1px solid var(--line-2);border-radius:10px;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(255,69,0,.05), transparent 60%),
+      linear-gradient(180deg, rgba(14,14,17,.6), rgba(10,10,12,.6));
+    backdrop-filter: blur(6px);
+    overflow:hidden;
+  }
+  .mesh-frame::before{
+    content:"";position:absolute;inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 75%);
+  }
+  .mesh-frame .corners span{position:absolute;width:14px;height:14px;border:1px solid rgba(255,255,255,.2)}
+  .mesh-frame .corners span:nth-child(1){top:10px;left:10px;border-right:none;border-bottom:none}
+  .mesh-frame .corners span:nth-child(2){top:10px;right:10px;border-left:none;border-bottom:none}
+  .mesh-frame .corners span:nth-child(3){bottom:10px;left:10px;border-right:none;border-top:none}
+  .mesh-frame .corners span:nth-child(4){bottom:10px;right:10px;border-left:none;border-top:none}
+  .mesh-meta{position:absolute;top:18px;left:18px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);letter-spacing:.12em;text-transform:uppercase}
+  .mesh-meta b{color:var(--green)}
+  .mesh-meta2{position:absolute;top:18px;right:18px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);letter-spacing:.12em;text-transform:uppercase;text-align:right}
+  .mesh-bottom{position:absolute;bottom:16px;left:18px;right:18px;display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);letter-spacing:.1em;text-transform:uppercase}
+  .mesh-bottom .ok{color:var(--green)}
+
+  /* tickers under hero */
+  .tickers{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;margin-top:72px;overflow:hidden}
+  .ticker{background:var(--bg-2);padding:22px;display:flex;flex-direction:column;gap:6px}
+  .ticker .k{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);letter-spacing:.12em;text-transform:uppercase}
+  .ticker .v{font-family:'JetBrains Mono',monospace;font-size:26px;color:var(--text);letter-spacing:-.01em}
+  .ticker .v.green{color:var(--green)}
+  .ticker .v.orange{color:var(--orange)}
+  @media (max-width:780px){.tickers{grid-template-columns:repeat(2,1fr)}}
+
+  /* ——— SECTION HEADER ——— */
+  .sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:120px 0 40px}
+  .sec-head .label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--orange);letter-spacing:.14em;text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+  .sec-head .label::before{content:"";display:block;width:24px;height:1px;background:var(--orange)}
+  .sec-head h2{font-size:clamp(28px,3.6vw,44px);letter-spacing:-.02em;font-weight:500;margin:0;line-height:1.1;max-width:720px;text-wrap:balance}
+  .sec-head .meta{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+
+  /* ——— THREAT ——— */
+  .threat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  @media (max-width:900px){.threat-grid{grid-template-columns:1fr}}
+  .threat{
+    border:1px solid var(--line-2);border-radius:10px;padding:28px;
+    background:linear-gradient(180deg, rgba(20,20,24,.6), rgba(14,14,17,.5));
+    backdrop-filter: blur(8px);
+    position:relative;overflow:hidden;
+    transition:border-color .25s, transform .25s;
+  }
+  .threat:hover{border-color:rgba(255,69,0,.4);transform:translateY(-2px)}
+  .threat .warn{
+    display:flex;align-items:center;gap:10px;
+    font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--orange);letter-spacing:.14em;text-transform:uppercase;
+  }
+  .warn-ico{width:28px;height:28px;display:grid;place-items:center;border:1px solid rgba(255,69,0,.4);border-radius:4px;background:rgba(255,69,0,.08)}
+  .warn-ico svg{width:14px;height:14px;stroke:var(--orange);fill:none;stroke-width:1.5}
+  .threat h3{font-size:22px;font-weight:500;letter-spacing:-.01em;margin:24px 0 10px}
+  .threat p{color:var(--text-dim);font-size:14px;line-height:1.55;margin:0}
+  .threat .num{position:absolute;top:18px;right:22px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);letter-spacing:.12em}
+  .threat .footer-strip{
+    margin-top:22px;padding-top:18px;border-top:1px dashed var(--line);
+    display:flex;justify-content:space-between;align-items:center;
+    font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);letter-spacing:.1em;text-transform:uppercase
+  }
+  .threat .footer-strip b{color:var(--orange)}
+
+  /* ——— ARCHITECTURE ——— */
+  .arch{
+    position:relative;border:1px solid var(--line-2);border-radius:12px;overflow:hidden;
+    background:linear-gradient(180deg, rgba(14,14,17,.7), rgba(10,10,12,.6));
+    backdrop-filter:blur(8px);
+  }
+  .arch-row{display:grid;grid-template-columns:200px 1fr 280px;gap:0;border-bottom:1px solid var(--line);cursor:pointer;transition:background .2s}
+  .arch-row:last-child{border-bottom:none}
+  .arch-row:hover{background:rgba(255,255,255,.015)}
+  .arch-row.active{background:linear-gradient(90deg, rgba(255,69,0,.06), transparent 60%)}
+  .arch-left{padding:28px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:6px;justify-content:center}
+  .arch-left .layer{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);letter-spacing:.14em;text-transform:uppercase}
+  .arch-left .layer-name{font-size:18px;font-weight:500;letter-spacing:-.01em}
+  .arch-mid{padding:28px;display:flex;flex-direction:column;gap:12px;justify-content:center}
+  .arch-mid h4{margin:0;font-size:20px;font-weight:500;letter-spacing:-.01em;font-family:'JetBrains Mono',monospace}
+  .arch-mid p{margin:0;color:var(--text-dim);font-size:14px;line-height:1.55;max-width:560px}
+  .arch-right{padding:28px;border-left:1px solid var(--line);display:flex;flex-direction:column;gap:10px;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint)}
+  .arch-right .kv{display:flex;justify-content:space-between;gap:16px}
+  .arch-right .kv span:last-child{color:var(--text)}
+  .arch-right .kv .g{color:var(--green)}
+  .arch-row .step{display:flex;align-items:center;gap:10px;color:var(--orange);font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em}
+  .arch-row .step-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:1px solid var(--orange);border-radius:50%;color:var(--orange);font-size:10px}
+  .arch-row.active .step-num{background:var(--orange);color:#0a0a0c;box-shadow:0 0 16px var(--orange-glow)}
+  @media (max-width:1000px){.arch-row{grid-template-columns:1fr}.arch-left,.arch-right{border:none;border-bottom:1px solid var(--line)}}
+
+  /* flow bar */
+  .flow-bar{display:flex;align-items:center;gap:12px;padding:16px 24px;border-top:1px solid var(--line);background:rgba(10,10,12,.6);font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);letter-spacing:.1em;text-transform:uppercase}
+  .flow-bar .seg{flex:1;height:2px;background:var(--line);position:relative;overflow:hidden;border-radius:1px}
+  .flow-bar .seg::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,var(--orange),transparent);animation:flow 3s linear infinite}
+  @keyframes flow{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+  /* ——— TELEMETRY CONSOLE ——— */
+  .console{
+    border:1px solid var(--line-2);border-radius:12px;overflow:hidden;
+    background:linear-gradient(180deg, rgba(14,14,17,.85), rgba(10,10,12,.85));
+  }
+  .console-head{
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:14px 18px;border-bottom:1px solid var(--line);background:rgba(0,0,0,.2);
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);letter-spacing:.1em;text-transform:uppercase
+  }
+  .console-head .tabs{display:flex;gap:2px}
+  .console-head .tab{padding:6px 12px;border:1px solid var(--line);border-radius:4px;color:var(--text-dim)}
+  .console-head .tab.on{background:rgba(255,69,0,.1);border-color:rgba(255,69,0,.3);color:var(--orange)}
+  .console-head .lights{display:flex;gap:6px}
+  .console-head .lights i{width:8px;height:8px;border-radius:50%;background:var(--line-2);display:inline-block}
+  .console-head .lights i.g{background:var(--green);box-shadow:0 0 8px var(--green-glow)}
+  .console-head .lights i.o{background:var(--orange);box-shadow:0 0 8px var(--orange-glow)}
+
+  .console-body{display:grid;grid-template-columns:1fr 380px;min-height:540px}
+  @media (max-width:960px){.console-body{grid-template-columns:1fr;min-height:auto}}
+
+  /* map panel */
+  .map-panel{position:relative;border-right:1px solid var(--line);overflow:hidden;min-height:540px}
+  .map-panel svg.topo{position:absolute;inset:0;width:100%;height:100%}
+  .map-overlay{position:absolute;inset:0;pointer-events:none}
+  .map-hud-tl{position:absolute;top:14px;left:14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);letter-spacing:.12em;text-transform:uppercase;line-height:1.8}
+  .map-hud-tl .lbl{color:var(--text-dim)}
+  .map-hud-tl .v{color:var(--text)}
+  .map-hud-tr{position:absolute;top:14px;right:14px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);letter-spacing:.1em;text-transform:uppercase}
+  .map-hud-tr .chip{padding:4px 8px;border:1px solid var(--line-2);border-radius:4px;background:rgba(10,10,12,.5)}
+  .map-hud-tr .chip.warn{color:var(--orange);border-color:rgba(255,69,0,.35);background:rgba(255,69,0,.06)}
+  .map-hud-tr .chip.ok{color:var(--green);border-color:rgba(50,215,75,.3);background:rgba(50,215,75,.05)}
+  .map-legend{position:absolute;bottom:14px;left:14px;display:flex;gap:16px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);letter-spacing:.1em;text-transform:uppercase}
+  .map-legend span{display:inline-flex;align-items:center;gap:6px}
+  .map-legend i{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .map-scale{position:absolute;bottom:14px;right:14px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+  .map-scale .bar{width:80px;height:1px;background:var(--text-faint);position:relative}
+  .map-scale .bar::before,.map-scale .bar::after{content:"";position:absolute;width:1px;height:5px;background:var(--text-faint);top:-2px}
+  .map-scale .bar::before{left:0}
+  .map-scale .bar::after{right:0}
+
+  /* terminal */
+  .term-panel{display:flex;flex-direction:column;background:rgba(0,0,0,.25);min-height:540px}
+  .term-head{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);letter-spacing:.12em;text-transform:uppercase}
+  .term-head .live{display:inline-flex;align-items:center;gap:6px;color:var(--green)}
+  .term-head .live i{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green-glow);animation:pulse 1.4s infinite}
+  .term-body{flex:1;padding:14px 16px;overflow:auto;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:#cfcfd6;max-height:470px}
+  .term-line{white-space:pre-wrap}
+  .term-line .t{color:var(--text-faint)}
+  .term-line .tag-sys{color:#8ab4f8}
+  .term-line .tag-ai{color:var(--orange)}
+  .term-line .tag-mesh{color:var(--green)}
+  .term-line .tag-state{color:#c5a6ff}
+  .term-line .tag-warn{color:var(--amber)}
+  .term-line .tag-err{color:var(--red)}
+  .term-line .ok{color:var(--green)}
+  .term-line .val{color:#e8e8ec}
+  .term-caret::after{content:"▌";color:var(--orange);animation:blink 1s steps(2) infinite;margin-left:2px}
+  @keyframes blink{50%{opacity:0}}
+
+  /* node legend on map */
+  .node-card{
+    position:absolute;padding:8px 10px;border:1px solid var(--line-2);background:rgba(10,10,12,.7);backdrop-filter:blur(6px);border-radius:6px;
+    font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text);letter-spacing:.08em;text-transform:uppercase;
+    pointer-events:none;
+  }
+  .node-card .id{color:var(--orange)}
+  .node-card .st{color:var(--green);display:block;font-size:9px;margin-top:3px}
+
+  /* ——— SURVIVOR CONNECT ——— */
+  .survivor-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+  @media (max-width:900px){.survivor-grid{grid-template-columns:1fr}}
+  .phone-wrap{display:flex;justify-content:center}
+  .phone{
+    width:320px;height:660px;border-radius:44px;
+    background:#1a1a1f;
+    padding:12px;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,.06),
+      0 40px 120px -20px rgba(0,0,0,.7),
+      0 0 80px -20px rgba(255,69,0,.2);
+    position:relative;
+  }
+  .phone .notch{position:absolute;top:18px;left:50%;transform:translateX(-50%);width:110px;height:28px;background:#0a0a0c;border-radius:20px;z-index:2}
+  .phone-screen{
+    width:100%;height:100%;border-radius:34px;overflow:hidden;position:relative;
+    background:linear-gradient(180deg,#0a0a0c 0%,#141418 100%);
+    display:flex;flex-direction:column;
+  }
+  .phone-status{
+    padding:14px 22px 6px;display:flex;justify-content:space-between;align-items:center;
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text)
+  }
+  .phone-status .icons{display:flex;gap:6px;color:var(--text)}
+  .phone-wifi{padding:34px 22px 0;display:flex;flex-direction:column;gap:4px;align-items:center;text-align:center}
+  .phone-wifi .logo-ring{width:54px;height:54px;border:1.5px solid var(--orange);border-radius:50%;display:grid;place-items:center;margin-bottom:14px;box-shadow:0 0 30px -8px var(--orange-glow)}
+  .phone-wifi .logo-ring::after{content:"V";font-family:'JetBrains Mono',monospace;font-weight:500;color:var(--orange);font-size:22px}
+  .phone-wifi h4{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--orange);letter-spacing:.14em;text-transform:uppercase;margin:0}
+  .phone-wifi h3{font-size:22px;font-weight:500;letter-spacing:-.01em;margin:6px 0 8px;color:var(--text)}
+  .phone-wifi p{font-size:13px;color:var(--text-dim);line-height:1.5;margin:0;max-width:240px}
+  .phone-body{padding:28px 22px;display:flex;flex-direction:column;gap:12px;flex:1}
+  .phone-row{display:flex;justify-content:space-between;align-items:center;padding:14px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase}
+  .phone-row .v{color:var(--text)}
+  .phone-row .v.g{color:var(--green)}
+  .phone-ping{margin-top:auto;padding:16px;background:var(--orange);color:#0a0a0c;border-radius:12px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;box-shadow:0 0 30px -8px var(--orange-glow)}
+  .phone-hint{text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);letter-spacing:.1em;text-transform:uppercase;padding:10px 22px 24px}
+
+  .survivor-copy h3{font-size:34px;font-weight:500;letter-spacing:-.02em;margin:0 0 18px;line-height:1.15}
+  .survivor-copy p{color:var(--text-dim);font-size:16px;line-height:1.6;margin:0 0 20px}
+  .survivor-steps{display:flex;flex-direction:column;gap:0;border-top:1px solid var(--line);margin-top:8px}
+  .survivor-step{display:grid;grid-template-columns:50px 1fr;gap:16px;padding:22px 0;border-bottom:1px solid var(--line)}
+  .survivor-step .num{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--orange);letter-spacing:.12em}
+  .survivor-step h5{margin:0 0 6px;font-size:15px;font-weight:500;letter-spacing:-.005em}
+  .survivor-step p{margin:0;font-size:13px;color:var(--text-dim);line-height:1.55}
+
+  /* ——— FOOTER ——— */
+  footer{border-top:1px solid var(--line);margin-top:120px;padding:48px 0 32px}
+  .foot{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:24px}
+  .foot .left{display:flex;flex-direction:column;gap:8px}
+  .foot .title{font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+  .foot .sub{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-faint);letter-spacing:.1em;text-transform:uppercase}
+  .foot-links{display:flex;gap:24px}
+  .foot-links a{color:var(--text-dim);text-decoration:none;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:6px 0;border-bottom:1px solid transparent;transition:color .2s, border-color .2s}
+  .foot-links a:hover{color:var(--text);border-color:var(--orange)}
+  .foot-bottom{margin-top:32px;padding-top:20px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-faint);letter-spacing:.12em;text-transform:uppercase;flex-wrap:wrap;gap:10px}
+
+  /* utility */
+  .divider{height:1px;background:var(--line);margin:0}
+  .scan{
+    position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(255,69,0,.6),transparent);
+    animation: scan 6s linear infinite;pointer-events:none;
+  }
+  @keyframes scan{0%{top:10%}50%{top:90%}100%{top:10%}}
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<!-- NAV -->
+<nav class="topnav">
+  <div class="inner">
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FF4500" stroke-width="1.5">
+          <path d="M12 2 L22 8 L22 16 L12 22 L2 16 L2 8 Z"/>
+          <path d="M12 2 L12 22 M2 8 L22 16 M22 8 L2 16" stroke-opacity=".4"/>
+          <circle cx="12" cy="12" r="2" fill="#FF4500"/>
+        </svg>
+      </div>
+      <span>VANGUARD</span>
+      <span class="brand-meta">// Autonomous SAR Mesh</span>
+    </div>
+    <div class="nav-links">
+      <a href="#threat">Threat</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#telemetry">Telemetry</a>
+      <a href="#survivor">Survivor Link</a>
+      <div class="status-pill"><span class="dot"></span>MESH · ONLINE</div>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <span class="eyebrow"><span class="tick"></span>CLASSIFICATION · FIELD-READY · V0.4.2</span>
+        <h1 class="headline">Compute at the Edge.<br/><span class="accent">Consensus</span> in the Mesh.</h1>
+        <p class="sub">Project Vanguard deploys autonomous AI drone swarms into zero-connectivity disaster zones. Powered by a decentralized BFT DAG network and onboard vision processing — no cloud, no cell, no central command.</p>
+        <div class="cta-row">
+          <a class="btn btn-primary" href="#telemetry">
+            Launch Godot Simulation
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2 L9 6 L3 10 Z" fill="currentColor"/></svg>
+          </a>
+          <a class="btn btn-secondary" href="#architecture">
+            View Rust Architecture
+            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 6 H10 M7 3 L10 6 L7 9"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <div>
+        <div class="mesh-frame" id="meshFrame">
+          <div class="corners"><span></span><span></span><span></span><span></span></div>
+          <div class="mesh-meta">MESH TOPOLOGY<br/>NODES <b>5/5</b> · QUORUM OK</div>
+          <div class="mesh-meta2">LAT 47.6062°N<br/>LON 122.3321°W</div>
+          <svg viewBox="0 0 400 400" width="100%" height="100%" style="position:relative;z-index:1" id="meshSvg"></svg>
+          <div class="scan"></div>
+          <div class="mesh-bottom">
+            <span>GEO-SPATIAL RELAY</span>
+            <span class="ok">LINK INTEGRITY 98.4%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tickers">
+      <div class="ticker"><span class="k">Nodes Online</span><span class="v green">05 / 05</span></div>
+      <div class="ticker"><span class="k">Consensus Round</span><span class="v">R-04291</span></div>
+      <div class="ticker"><span class="k">Edge Inference</span><span class="v">19 ms</span></div>
+      <div class="ticker"><span class="k">Last Commit</span><span class="v orange">+00:00.81</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- THREAT -->
+<section id="threat">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="label">01 · The Threat</div>
+        <h2>Disaster zones break the infrastructure rescue teams depend on.</h2>
+      </div>
+      <div class="meta">§01 / PROBLEM SPACE</div>
+    </div>
+
+    <div class="threat-grid">
+      <div class="threat">
+        <div class="num">T-01</div>
+        <div class="warn">
+          <div class="warn-ico">
+            <svg viewBox="0 0 24 24"><path d="M12 3 L22 20 L2 20 Z"/><path d="M12 10 L12 14 M12 17 L12 17.5"/></svg>
+          </div>
+          <span>DEAD INFRASTRUCTURE</span>
+        </div>
+        <h3>Cell towers down. Backhaul severed.</h3>
+        <p>Within hours of a major event, terrestrial networks collapse. First responders lose GPS sync, radio coordination, and every cloud service they trained on.</p>
+        <div class="footer-strip"><span>RECOVERY WINDOW</span><b>0–72 H</b></div>
+      </div>
+
+      <div class="threat">
+        <div class="num">T-02</div>
+        <div class="warn">
+          <div class="warn-ico">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12 H21 M12 3 A14 14 0 0 1 12 21 M12 3 A14 14 0 0 0 12 21"/></svg>
+          </div>
+          <span>BLIND SPOTS</span>
+        </div>
+        <h3>No cloud. No model API. No telemetry.</h3>
+        <p>Modern perception stacks assume a round-trip to a GPU cluster. Offline, that assumption becomes a liability — and seconds become survivors.</p>
+        <div class="footer-strip"><span>AVG CLOUD RTT</span><b>UNREACHABLE</b></div>
+      </div>
+
+      <div class="threat">
+        <div class="num">T-03</div>
+        <div class="warn">
+          <div class="warn-ico">
+            <svg viewBox="0 0 24 24"><path d="M4 7 H20 M4 12 H14 M4 17 H20"/><circle cx="18" cy="12" r="1.5" fill="currentColor"/></svg>
+          </div>
+          <span>CHAOTIC COORDINATION</span>
+        </div>
+        <h3>Siloed teams. Conflicting state.</h3>
+        <p>Fire, Medical, and Urban S&amp;R run incompatible tooling. Without a shared source of truth, the same building gets searched three times — and the next one, never.</p>
+        <div class="footer-strip"><span>REDUNDANT SEARCHES</span><b>~37%</b></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="label">02 · The Architecture</div>
+        <h2>A four-layer stack engineered to survive without infrastructure.</h2>
+      </div>
+      <div class="meta">§02 / RUNTIME · OFFLINE-FIRST</div>
+    </div>
+
+    <div class="arch" id="archStack">
+      <div class="arch-row active" data-layer="1">
+        <div class="arch-left">
+          <span class="layer">LAYER 01</span>
+          <span class="layer-name">Perception</span>
+          <div class="step"><span class="step-num">1</span><span>INGEST</span></div>
+        </div>
+        <div class="arch-mid">
+          <h4>Gemma 4 E4B — Onboard</h4>
+          <p>A quantized vision-language model runs directly on each drone's compute module, fusing optical and thermal feeds into structured detections. Zero round-trip. Zero dependency on an offboard GPU.</p>
+        </div>
+        <div class="arch-right">
+          <div class="kv"><span>MODEL</span><span>gemma-4-e4b-q4</span></div>
+          <div class="kv"><span>LATENCY</span><span class="g">19 ms</span></div>
+          <div class="kv"><span>POWER</span><span>6.2 W peak</span></div>
+          <div class="kv"><span>SENSORS</span><span>RGB + LWIR</span></div>
+        </div>
+      </div>
+
+      <div class="arch-row" data-layer="2">
+        <div class="arch-left">
+          <span class="layer">LAYER 02</span>
+          <span class="layer-name">Consensus</span>
+          <div class="step"><span class="step-num">2</span><span>AGREE</span></div>
+        </div>
+        <div class="arch-mid">
+          <h4>Tashi Vertex Engine — DAG BFT</h4>
+          <p>A Rust-native DAG consensus protocol orders events across the swarm without a leader or central server. Byzantine-fault tolerant to ⌊(n−1)/3⌋ compromised nodes. Drones disagree, then converge — in milliseconds.</p>
+        </div>
+        <div class="arch-right">
+          <div class="kv"><span>PROTOCOL</span><span>Vertex BFT</span></div>
+          <div class="kv"><span>QUORUM</span><span class="g">⌈2n/3⌉</span></div>
+          <div class="kv"><span>FINALITY</span><span>~810 ms</span></div>
+          <div class="kv"><span>LANG</span><span>Rust · no_std</span></div>
+        </div>
+      </div>
+
+      <div class="arch-row" data-layer="3">
+        <div class="arch-left">
+          <span class="layer">LAYER 03</span>
+          <span class="layer-name">Storage</span>
+          <div class="step"><span class="step-num">3</span><span>PERSIST</span></div>
+        </div>
+        <div class="arch-mid">
+          <h4>Redb — Embedded, Crash-Proof</h4>
+          <p>Every committed fact — a detection, a waypoint, a survivor ping — is journaled to an embedded key-value store with microsecond-latency writes and copy-on-write MVCC. A drone that reboots mid-flight picks up exactly where it left off.</p>
+        </div>
+        <div class="arch-right">
+          <div class="kv"><span>ENGINE</span><span>redb 2.x</span></div>
+          <div class="kv"><span>WRITE</span><span class="g">&lt;1 μs</span></div>
+          <div class="kv"><span>CRASH</span><span>COW · MVCC</span></div>
+          <div class="kv"><span>FOOTPRINT</span><span>12 MB RSS</span></div>
+        </div>
+      </div>
+
+      <div class="arch-row" data-layer="4">
+        <div class="arch-left">
+          <span class="layer">LAYER 04</span>
+          <span class="layer-name">Bridge</span>
+          <div class="step"><span class="step-num">4</span><span>RELAY</span></div>
+        </div>
+        <div class="arch-mid">
+          <h4>Captive Portal — Survivor Link</h4>
+          <p>Each drone broadcasts an open 802.11 SSID. A survivor with any phone can connect and ping their location into the mesh — no app, no signal, no signup. Their coordinates propagate through consensus in seconds.</p>
+        </div>
+        <div class="arch-right">
+          <div class="kv"><span>SSID</span><span>VANGUARD-SAR</span></div>
+          <div class="kv"><span>RANGE</span><span>~600 m</span></div>
+          <div class="kv"><span>PROTOCOL</span><span>HTTP/captive</span></div>
+          <div class="kv"><span>AUTH</span><span class="g">none required</span></div>
+        </div>
+      </div>
+
+      <div class="flow-bar">
+        <span>SENSOR</span>
+        <div class="seg"></div>
+        <span>PERCEPTION</span>
+        <div class="seg"></div>
+        <span>CONSENSUS</span>
+        <div class="seg"></div>
+        <span>STORAGE</span>
+        <div class="seg"></div>
+        <span>BRIDGE</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TELEMETRY -->
+<section id="telemetry">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="label">03 · Fleet Commander</div>
+        <h2>Live telemetry from the mesh — rendered in the same console field operators use.</h2>
+      </div>
+      <div class="meta">§03 / OPS · READ-ONLY DEMO</div>
+    </div>
+
+    <div class="console">
+      <div class="console-head">
+        <div class="tabs">
+          <span class="tab on">MAP</span>
+          <span class="tab">TELEMETRY</span>
+          <span class="tab">SWARM</span>
+          <span class="tab">ALERTS</span>
+        </div>
+        <div class="lights">
+          <i class="g"></i><i class="g"></i><i class="o"></i><i></i>
+        </div>
+        <span>VANGUARD-OPS · SECTOR 7-B · 47.6062°N 122.3321°W</span>
+      </div>
+
+      <div class="console-body">
+        <div class="map-panel" id="mapPanel">
+          <svg class="topo" viewBox="0 0 800 540" preserveAspectRatio="xMidYMid slice" id="topoSvg"></svg>
+
+          <div class="map-hud-tl">
+            <div><span class="lbl">SECTOR ·</span> <span class="v">7-B URBAN</span></div>
+            <div><span class="lbl">ZOOM ·</span> <span class="v">x42</span></div>
+            <div><span class="lbl">WIND ·</span> <span class="v">240° @ 12kt</span></div>
+          </div>
+
+          <div class="map-hud-tr">
+            <div class="chip ok">● MESH 5/5</div>
+            <div class="chip warn">▲ 3 SIGNATURES</div>
+            <div class="chip">⟳ R-04291</div>
+          </div>
+
+          <div class="map-legend">
+            <span><i style="background:var(--red);box-shadow:0 0 10px #ff3b30"></i>THERMAL</span>
+            <span><i style="background:var(--green);box-shadow:0 0 10px var(--green-glow)"></i>NODE</span>
+            <span><i style="background:var(--orange);box-shadow:0 0 10px var(--orange-glow)"></i>TARGET</span>
+          </div>
+
+          <div class="map-scale">
+            <span>500 m</span>
+            <div class="bar"></div>
+          </div>
+        </div>
+
+        <div class="term-panel">
+          <div class="term-head">
+            <span>/var/log/vanguard/mesh.jsonl</span>
+            <span class="live"><i></i>LIVE</span>
+          </div>
+          <div class="term-body" id="termBody"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SURVIVOR CONNECT -->
+<section id="survivor">
+  <div class="wrap">
+    <div class="sec-head">
+      <div>
+        <div class="label">04 · Survivor Connect</div>
+        <h2>The fastest help channel ever built: open your Wi-Fi list.</h2>
+      </div>
+      <div class="meta">§04 / LAST-MILE · ZERO-APP</div>
+    </div>
+
+    <div class="survivor-grid">
+      <div class="phone-wrap">
+        <div class="phone">
+          <div class="notch"></div>
+          <div class="phone-screen">
+            <div class="phone-status">
+              <span>9:41</span>
+              <div class="icons"><span>▲</span><span>●●●</span><span>■</span></div>
+            </div>
+            <div class="phone-wifi">
+              <div class="logo-ring"></div>
+              <h4>EMERGENCY PORTAL</h4>
+              <h3>You're connected to Vanguard-SAR</h3>
+              <p>Zero apps required. Ping your location — the swarm is already listening.</p>
+            </div>
+            <div class="phone-body">
+              <div class="phone-row"><span>NETWORK</span><span class="v">VANGUARD-SAR</span></div>
+              <div class="phone-row"><span>SIGNAL</span><span class="v g">STRONG · -42 dBm</span></div>
+              <div class="phone-row"><span>SURVIVORS</span><span class="v">7 PINGED</span></div>
+              <div class="phone-row"><span>ETA</span><span class="v g">00:04:18</span></div>
+              <div class="phone-ping">▲ PING MY LOCATION</div>
+            </div>
+            <div class="phone-hint">NO CELL · NO APP · NO SIGNUP</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="survivor-copy">
+        <h3>No app. No signal. Still reachable.</h3>
+        <p>Every drone in the swarm advertises an open 802.11 SSID. Connect from any modern phone and a captive-portal HTML page loads instantly — your location pings into BFT consensus and is visible to every node in the field within a single round.</p>
+        <div class="survivor-steps">
+          <div class="survivor-step">
+            <div class="num">01 ▸</div>
+            <div>
+              <h5>Open Wi-Fi settings</h5>
+              <p>Any OS. Any phone made in the last decade. The SSID appears as plain text: <span class="mono">VANGUARD-SAR</span>.</p>
+            </div>
+          </div>
+          <div class="survivor-step">
+            <div class="num">02 ▸</div>
+            <div>
+              <h5>Connect — the portal loads automatically</h5>
+              <p>Captive-portal detection on iOS, Android, and Windows triggers the emergency page without typing a URL.</p>
+            </div>
+          </div>
+          <div class="survivor-step">
+            <div class="num">03 ▸</div>
+            <div>
+              <h5>Tap once. You're on the map.</h5>
+              <p>Your coordinates are signed, gossiped into the DAG, and committed to the shared state in under one second.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div class="left">
+        <div class="title">PROJECT VANGUARD</div>
+        <div class="sub">// Built for the Tashi Vertex Hackathon · 2026</div>
+      </div>
+      <div class="foot-links">
+        <a href="#">GitHub ↗</a>
+        <a href="#">Whitepaper ↗</a>
+        <a href="#">Demo Video ↗</a>
+        <a href="#">Team</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <span>LICENSE · MIT · NO WARRANTY IN FIELD CONDITIONS</span>
+      <span>BUILD 0.4.2 · COMMIT 8a3f1c9 · 2026-04-22T09:41:00Z</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ===== Hero mesh viz ===== */
+(function(){
+  const svg = document.getElementById('meshSvg');
+  if (!svg) return;
+  const nodes = [
+    {x:200,y:90,  label:'N-01', role:'LEAD'},
+    {x:330,y:180, label:'N-02', role:'RLY'},
+    {x:290,y:310, label:'N-03', role:'EDG'},
+    {x:115,y:290, label:'N-04', role:'EDG'},
+    {x:80, y:150, label:'N-05', role:'OBS'}
+  ];
+  const ns='http://www.w3.org/2000/svg';
+  const defs = document.createElementNS(ns,'defs');
+  defs.innerHTML = `
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <radialGradient id="nodeGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF4500" stop-opacity="1"/>
+      <stop offset="60%" stop-color="#FF4500" stop-opacity=".3"/>
+      <stop offset="100%" stop-color="#FF4500" stop-opacity="0"/>
+    </radialGradient>
+  `;
+  svg.appendChild(defs);
+
+  // edges (full mesh)
+  for (let i=0;i<nodes.length;i++){
+    for (let j=i+1;j<nodes.length;j++){
+      const l = document.createElementNS(ns,'line');
+      l.setAttribute('x1',nodes[i].x);l.setAttribute('y1',nodes[i].y);
+      l.setAttribute('x2',nodes[j].x);l.setAttribute('y2',nodes[j].y);
+      l.setAttribute('stroke','rgba(50,215,75,.35)');
+      l.setAttribute('stroke-width','1');
+      l.setAttribute('stroke-dasharray','3 4');
+      svg.appendChild(l);
+    }
+  }
+
+  // animated packets along edges
+  const edges = [[0,1],[1,2],[2,3],[3,4],[4,0],[0,2],[1,3]];
+  edges.forEach((e,idx)=>{
+    const p = document.createElementNS(ns,'circle');
+    p.setAttribute('r','2.5');
+    p.setAttribute('fill','#32D74B');
+    p.setAttribute('filter','url(#glow)');
+    const anim = document.createElementNS(ns,'animateMotion');
+    anim.setAttribute('dur',(2.4+idx*.3)+'s');
+    anim.setAttribute('repeatCount','indefinite');
+    anim.setAttribute('path',`M${nodes[e[0]].x},${nodes[e[0]].y} L${nodes[e[1]].x},${nodes[e[1]].y}`);
+    p.appendChild(anim);
+    svg.appendChild(p);
+  });
+
+  // nodes
+  nodes.forEach((n,i)=>{
+    const halo = document.createElementNS(ns,'circle');
+    halo.setAttribute('cx',n.x);halo.setAttribute('cy',n.y);halo.setAttribute('r','26');
+    halo.setAttribute('fill','url(#nodeGrad)');
+    halo.setAttribute('opacity','.6');
+    const a = document.createElementNS(ns,'animate');
+    a.setAttribute('attributeName','r');a.setAttribute('values','20;34;20');a.setAttribute('dur',(2.2+i*.25)+'s');a.setAttribute('repeatCount','indefinite');
+    halo.appendChild(a);
+    svg.appendChild(halo);
+
+    const ring = document.createElementNS(ns,'circle');
+    ring.setAttribute('cx',n.x);ring.setAttribute('cy',n.y);ring.setAttribute('r','10');
+    ring.setAttribute('fill','none');ring.setAttribute('stroke','#FF4500');ring.setAttribute('stroke-width','1');
+    svg.appendChild(ring);
+
+    const core = document.createElementNS(ns,'circle');
+    core.setAttribute('cx',n.x);core.setAttribute('cy',n.y);core.setAttribute('r','3.5');
+    core.setAttribute('fill','#FF4500');
+    core.setAttribute('filter','url(#glow)');
+    svg.appendChild(core);
+
+    const lbl = document.createElementNS(ns,'text');
+    lbl.setAttribute('x', n.x + 14);
+    lbl.setAttribute('y', n.y - 10);
+    lbl.setAttribute('fill','#8A8A93');
+    lbl.setAttribute('font-family','JetBrains Mono, monospace');
+    lbl.setAttribute('font-size','10');
+    lbl.setAttribute('letter-spacing','1');
+    lbl.textContent = n.label + ' · ' + n.role;
+    svg.appendChild(lbl);
+  });
+})();
+
+/* ===== Architecture row active toggle ===== */
+document.querySelectorAll('#archStack .arch-row').forEach(row=>{
+  row.addEventListener('click',()=>{
+    document.querySelectorAll('#archStack .arch-row').forEach(r=>r.classList.remove('active'));
+    row.classList.add('active');
+  });
+});
+
+/* ===== Topo map on telemetry console ===== */
+(function(){
+  const svg = document.getElementById('topoSvg');
+  if (!svg) return;
+  const ns='http://www.w3.org/2000/svg';
+
+  // Contour-like concentric irregular paths
+  const defs = document.createElementNS(ns,'defs');
+  defs.innerHTML = `
+    <radialGradient id="heat" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FF3B30" stop-opacity=".8"/>
+      <stop offset="50%" stop-color="#FF3B30" stop-opacity=".25"/>
+      <stop offset="100%" stop-color="#FF3B30" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="nodeHeat" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#32D74B" stop-opacity=".6"/>
+      <stop offset="100%" stop-color="#32D74B" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glow2" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5"/>
+    </filter>
+  `;
+  svg.appendChild(defs);
+
+  // Grid
+  for (let x=0;x<=800;x+=40){
+    const l = document.createElementNS(ns,'line');
+    l.setAttribute('x1',x);l.setAttribute('y1',0);l.setAttribute('x2',x);l.setAttribute('y2',540);
+    l.setAttribute('stroke','rgba(255,255,255,.035)');l.setAttribute('stroke-width','1');
+    svg.appendChild(l);
+  }
+  for (let y=0;y<=540;y+=40){
+    const l = document.createElementNS(ns,'line');
+    l.setAttribute('x1',0);l.setAttribute('y1',y);l.setAttribute('x2',800);l.setAttribute('y2',y);
+    l.setAttribute('stroke','rgba(255,255,255,.035)');l.setAttribute('stroke-width','1');
+    svg.appendChild(l);
+  }
+
+  // Topo contours
+  function contour(cx,cy,baseR,count,color){
+    for (let i=0;i<count;i++){
+      const r = baseR + i*24;
+      const points = [];
+      const steps = 48;
+      for (let s=0;s<steps;s++){
+        const a = (s/steps)*Math.PI*2;
+        const wobble = Math.sin(a*3 + i*0.9)*6 + Math.cos(a*5 + i*0.4)*4;
+        const rr = r + wobble;
+        points.push([cx + Math.cos(a)*rr, cy + Math.sin(a)*rr]);
+      }
+      const d = 'M'+points.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' L ')+' Z';
+      const p = document.createElementNS(ns,'path');
+      p.setAttribute('d',d);p.setAttribute('fill','none');
+      p.setAttribute('stroke',color);p.setAttribute('stroke-width','1');
+      svg.appendChild(p);
+    }
+  }
+  contour(220,180,30,6,'rgba(255,255,255,.05)');
+  contour(580,360,40,7,'rgba(255,255,255,.045)');
+  contour(680,140,28,4,'rgba(255,255,255,.04)');
+
+  // Drone nodes
+  const nodes = [
+    {x:180,y:140,id:'N-01',st:'LEAD'},
+    {x:420,y:210,id:'N-02',st:'RLY'},
+    {x:600,y:180,id:'N-03',st:'EDG'},
+    {x:330,y:400,id:'N-04',st:'EDG'},
+    {x:640,y:430,id:'N-05',st:'OBS'}
+  ];
+  // edges
+  const eList = [[0,1],[1,2],[1,3],[2,4],[3,4],[0,3]];
+  eList.forEach(e=>{
+    const l = document.createElementNS(ns,'line');
+    l.setAttribute('x1',nodes[e[0]].x);l.setAttribute('y1',nodes[e[0]].y);
+    l.setAttribute('x2',nodes[e[1]].x);l.setAttribute('y2',nodes[e[1]].y);
+    l.setAttribute('stroke','rgba(50,215,75,.4)');l.setAttribute('stroke-width','1');
+    l.setAttribute('stroke-dasharray','2 4');
+    svg.appendChild(l);
+  });
+
+  nodes.forEach(n=>{
+    const halo = document.createElementNS(ns,'circle');
+    halo.setAttribute('cx',n.x);halo.setAttribute('cy',n.y);halo.setAttribute('r','22');
+    halo.setAttribute('fill','url(#nodeHeat)');
+    svg.appendChild(halo);
+    const c = document.createElementNS(ns,'circle');
+    c.setAttribute('cx',n.x);c.setAttribute('cy',n.y);c.setAttribute('r','4');
+    c.setAttribute('fill','#32D74B');c.setAttribute('filter','url(#glow2)');
+    svg.appendChild(c);
+    const t = document.createElementNS(ns,'text');
+    t.setAttribute('x',n.x+10);t.setAttribute('y',n.y-10);
+    t.setAttribute('fill','#8A8A93');
+    t.setAttribute('font-family','JetBrains Mono, monospace');t.setAttribute('font-size','10');
+    t.textContent = n.id+' · '+n.st;
+    svg.appendChild(t);
+  });
+
+  // Thermal signatures
+  const heats = [
+    {x:260,y:320,r:32},
+    {x:500,y:260,r:22},
+    {x:150,y:420,r:26}
+  ];
+  heats.forEach((h,i)=>{
+    const hal = document.createElementNS(ns,'circle');
+    hal.setAttribute('cx',h.x);hal.setAttribute('cy',h.y);hal.setAttribute('r',h.r);
+    hal.setAttribute('fill','url(#heat)');
+    const a = document.createElementNS(ns,'animate');
+    a.setAttribute('attributeName','r');a.setAttribute('values',`${h.r};${h.r+8};${h.r}`);
+    a.setAttribute('dur',(2+i*.4)+'s');a.setAttribute('repeatCount','indefinite');
+    hal.appendChild(a);
+    svg.appendChild(hal);
+
+    const c = document.createElementNS(ns,'circle');
+    c.setAttribute('cx',h.x);c.setAttribute('cy',h.y);c.setAttribute('r','3');
+    c.setAttribute('fill','#FF3B30');
+    svg.appendChild(c);
+
+    // reticle
+    const ret = document.createElementNS(ns,'g');
+    ret.setAttribute('stroke','rgba(255,59,48,.6)');ret.setAttribute('stroke-width','1');ret.setAttribute('fill','none');
+    ret.innerHTML = `
+      <circle cx="${h.x}" cy="${h.y}" r="${h.r+6}"/>
+      <line x1="${h.x-h.r-12}" y1="${h.y}" x2="${h.x-h.r-2}" y2="${h.y}"/>
+      <line x1="${h.x+h.r+2}" y1="${h.y}" x2="${h.x+h.r+12}" y2="${h.y}"/>
+      <line x1="${h.x}" y1="${h.y-h.r-12}" x2="${h.x}" y2="${h.y-h.r-2}"/>
+      <line x1="${h.x}" y1="${h.y+h.r+2}" x2="${h.x}" y2="${h.y+h.r+12}"/>
+    `;
+    svg.appendChild(ret);
+
+    const t = document.createElementNS(ns,'text');
+    t.setAttribute('x',h.x+h.r+16);t.setAttribute('y',h.y-h.r-2);
+    t.setAttribute('fill','#FF3B30');t.setAttribute('font-family','JetBrains Mono, monospace');t.setAttribute('font-size','10');
+    t.textContent = `TGT-${(i+1).toString().padStart(2,'0')} · 36.4°C`;
+    svg.appendChild(t);
+  });
+
+  // Path line (flight path)
+  const path = document.createElementNS(ns,'path');
+  path.setAttribute('d','M 80 80 Q 250 100, 420 210 T 760 460');
+  path.setAttribute('stroke','rgba(255,69,0,.35)');
+  path.setAttribute('stroke-width','1');
+  path.setAttribute('stroke-dasharray','4 6');
+  path.setAttribute('fill','none');
+  svg.appendChild(path);
+})();
+
+/* ===== Typewriter terminal ===== */
+(function(){
+  const body = document.getElementById('termBody');
+  if (!body) return;
+
+  const palette = {
+    SYS: 'tag-sys', AI: 'tag-ai', MESH: 'tag-mesh', STATE: 'tag-state', WARN: 'tag-warn', ERR: 'tag-err'
+  };
+
+  const seeds = [
+    ['SYS','booting vertex-node · version=0.4.2'],
+    ['MESH','discovered peer N-02 (47.6055, -122.3301) rssi=-46'],
+    ['MESH','discovered peer N-03 (47.6071, -122.3352) rssi=-51'],
+    ['MESH','discovered peer N-04 (47.6043, -122.3289) rssi=-48'],
+    ['MESH','discovered peer N-05 (47.6089, -122.3340) rssi=-54'],
+    ['SYS','quorum formed {n:5, f:1} · leader=N-01'],
+    ['AI','gemma-4-e4b loaded · q4 · 1.8GB · warmup 190ms'],
+    ['AI','frame 18422 · confidence=0.94 · class=\"human\" · bbox=[412,188,488,310]'],
+    ['STATE','redb: commit tx_04291 · 3 rows · 412μs'],
+    ['MESH','gossip round R-04291 · latency 812ms · ⌈2n/3⌉ ok'],
+    ['SYS','captive portal up · ssid=VANGUARD-SAR · range ~600m'],
+    ['AI','thermal anomaly · 36.4°C · lat=47.6062 lon=-122.3321'],
+    ['MESH','survivor ping received · phone=android/13 · tap=1'],
+    ['STATE','committed SURVIVOR_PING · tx_04292 · propagated 5/5'],
+    ['AI','reassign waypoint · N-03 → TGT-01 · ETA 00:04:18'],
+    ['WARN','N-05 battery 28% · returning to relay grid'],
+    ['SYS','heartbeat ok · 5/5 · drift=±2ms'],
+    ['AI','frame 18501 · confidence=0.98 · class=\"human\" · bbox=[220,310,298,430]'],
+    ['STATE','redb: commit tx_04293 · 5 rows · 389μs'],
+    ['MESH','quorum reached · R-04292 · 5/5'],
+    ['SYS','dispatch complete · 3 signatures confirmed']
+  ];
+
+  let idx = 0;
+  const maxLines = 60;
+
+  function now(){
+    const d = new Date();
+    const pad = n => n.toString().padStart(2,'0');
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${d.getMilliseconds().toString().padStart(3,'0')}`;
+  }
+
+  function colorize(tag, msg){
+    // Highlight numbers and quoted strings a bit
+    let h = msg.replace(/([0-9]+\.?[0-9]*)(ms|μs|%|\u00B0C|GB|MB|kt|m|s)?/g, (m,num,unit)=>{
+      return `<span class="val">${num}${unit||''}</span>`;
+    });
+    h = h.replace(/\"([^\"]+)\"/g,'<span class="ok">"$1"</span>');
+    return h;
+  }
+
+  function addLine(tag, msg){
+    const el = document.createElement('div');
+    el.className = 'term-line';
+    el.innerHTML = `<span class="t">[${now()}]</span> <span class="${palette[tag]||''}">[${tag}]</span> ${colorize(tag,msg)}`;
+    body.appendChild(el);
+    // remove caret from previous
+    body.querySelectorAll('.term-caret').forEach(x=>x.classList.remove('term-caret'));
+    el.classList.add('term-caret');
+    while (body.children.length > maxLines) body.removeChild(body.firstChild);
+    body.scrollTop = body.scrollHeight;
+  }
+
+  // typewriter per line
+  function typeNext(){
+    const [tag,msg] = seeds[idx % seeds.length];
+    addLine(tag,msg);
+    idx++;
+    const delay = 700 + Math.random()*1400;
+    setTimeout(typeNext, delay);
+  }
+
+  // seed a few instantly
+  for (let k=0;k<8;k++){
+    const [tag,msg] = seeds[idx % seeds.length];
+    addLine(tag,msg);
+    idx++;
+  }
+  setTimeout(typeNext, 900);
+})();
+</script>
+
+</body>
+</html>

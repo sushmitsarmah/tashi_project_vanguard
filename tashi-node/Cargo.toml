@@ -16,6 +16,9 @@ bincode = { workspace = true }
 anyhow = { workspace = true }
 clap = { workspace = true }
 tashi-vertex = { workspace = true }
+rig-core = "0.35.0"   # check crates.io for newest; API matches the latest docs
+tower-http = { version = "0.5", features = ["cors"] }
+redb = "4.1.0"
 
 [[bin]]
 name = "warmup"

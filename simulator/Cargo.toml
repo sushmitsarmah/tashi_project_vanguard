@@ -13,3 +13,4 @@ axum = { workspace = true }
 chrono = { workspace = true }
 rand = { workspace = true }
 tashi-vertex = { workspace = true }
+tower-http = { version = "0.5", features = ["cors"] }

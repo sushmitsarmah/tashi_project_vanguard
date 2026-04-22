@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swarm 5-View Sim (Consensus Feed)</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #111;
+            color: #0f0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        #telemetry {
+            position: absolute;
+            background: rgba(0, 18, 0, 0.92);
+            border: 1px solid #0f0;
+            padding: 14px;
+            font-size: 13px;
+            line-height: 1.55;
+            pointer-events: none;
+            z-index: 100;
+            box-sizing: border-box;
+            overflow: hidden;
+            color: #0f0;
+        }
+        .cam-label {
+            position: absolute;
+            z-index: 50;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 3px 8px;
+            font-size: 12px;
+            pointer-events: none;
+            border-left: 2px solid #0f0;
+        }
+        .status-ok  { color: #0f0; }
+        .status-bad { color: #f66; }
+        .analyst    { color: #ffd166; margin: 8px 0; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div id="telemetry">INITIALIZING MESH...</div>
+    <div id="labels"></div>
+
+    <script type="module">
+        import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
+
+        // ---------- Consensus feed config ----------
+        // Point this at whichever tashi node you want to observe. All nodes
+        // should return the same state — that's the whole point. To demo
+        // consensus, open multiple browser windows each targeting a different
+        // node (9001, 9002, 9003, …) and confirm they stay in sync.
+        // const NODE_URL = 'http://127.0.0.1:9001/state';
+
+        // ---------- Consensus feed config ----------
+        const urlParams = new URLSearchParams(window.location.search);
+        let port = 9001; // Default port
+
+        if (urlParams.has('node')) {
+            const nodeNum = parseInt(urlParams.get('node'), 10);
+            if (!isNaN(nodeNum)) {
+                port = 9000 + nodeNum;
+            }
+        }
+
+        const NODE_URL = `http://127.0.0.1:${port}/state`;
+
+        const POLL_INTERVAL_MS = 500;
+
+        // Must match LAT/LON bounds of whatever's generating the positions upstream.
+        const LAT_MIN = 34.0;
+        const LAT_MAX = 34.15;
+        const LON_MIN = -118.3;
+        const LON_MAX = -118.15;
+        const WORLD_SIZE = 150;
+        const NUM_DRONES = 4;
+
+        const feed = {
+            online: false,
+            lastPollMs: 0,
+            nodeId: '—',
+            analyst: null,
+        };
+
+        function latLonToWorld(lat, lon) {
+            const u = (lon - LON_MIN) / (LON_MAX - LON_MIN);
+            const v = (lat - LAT_MIN) / (LAT_MAX - LAT_MIN);
+            return {
+                x: u * WORLD_SIZE - WORLD_SIZE / 2,
+                z: -(v * WORLD_SIZE - WORLD_SIZE / 2),
+            };
+        }
+
+        // ---------- Scene ----------
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x6a7488);
+        scene.fog = new THREE.Fog(0x6a7488, 80, 320);
+
+        scene.add(new THREE.AmbientLight(0xb8c0d0, 2.4));
+        scene.add(new THREE.HemisphereLight(0xaac0e0, 0x6a5a48, 1.2));
+        const dirLight = new THREE.DirectionalLight(0xfff0d8, 1.6);
+        dirLight.position.set(50, 100, 50);
+        scene.add(dirLight);
+        const rimLight = new THREE.DirectionalLight(0x88aaff, 0.5);
+        rimLight.position.set(-50, 30, -50);
+        scene.add(rimLight);
+
+        // ---------- Destroyed city ----------
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(400, 400),
+            new THREE.MeshStandardMaterial({ color: 0x6e6e75, roughness: 0.95 })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        scene.add(floor);
+
+        const citySize = 150;
+        const buildingMat = new THREE.MeshStandardMaterial({ color: 0x8a8a95, roughness: 0.9 });
+        for (let i = 0; i < 200; i++) {
+            const w = Math.random() * 5 + 2;
+            const d = Math.random() * 5 + 2;
+            const h = Math.random() * 20 + 2;
+            const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), buildingMat);
+            b.position.set((Math.random() - 0.5) * citySize, h / 2, (Math.random() - 0.5) * citySize);
+            if (Math.random() < 0.25) {
+                b.rotation.z = (Math.random() - 0.5) * 0.4;
+                b.rotation.x = (Math.random() - 0.5) * 0.2;
+            }
+            scene.add(b);
+        }
+        const rubbleMat = new THREE.MeshStandardMaterial({ color: 0x9a9aa0, roughness: 1.0 });
+        for (let i = 0; i < 150; i++) {
+            const s = Math.random() * 1.2 + 0.3;
+            const r = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), rubbleMat);
+            r.position.set((Math.random() - 0.5) * citySize * 1.2, s / 2, (Math.random() - 0.5) * citySize * 1.2);
+            r.rotation.set(Math.random(), Math.random(), Math.random());
+            scene.add(r);
+        }
+
+        // ---------- Cameras ----------
+        const globalCam = new THREE.PerspectiveCamera(55, 1, 0.1, 500);
+        globalCam.position.set(0, 90, 110);
+        globalCam.lookAt(0, 10, 0);
+
+        // ---------- Drones ----------
+        const droneGeo = new THREE.ConeGeometry(0.5, 2, 4);
+        droneGeo.rotateX(-Math.PI / 2);
+        const droneMat = new THREE.MeshStandardMaterial({
+            color: 0xff3333, metalness: 0.7, roughness: 0.4, emissive: 0x330000
+        });
+
+        const drones = [];
+        const droneCams = [];
+        for (let i = 0; i < NUM_DRONES; i++) {
+            const mesh = new THREE.Mesh(droneGeo, droneMat);
+            mesh.position.set(0, 35 + i * 1.5, 0);
+            scene.add(mesh);
+
+            const beacon = new THREE.PointLight(0xff2222, 1.5, 8);
+            beacon.position.set(0, -0.3, 0);
+            mesh.add(beacon);
+
+            const fpvCam = new THREE.PerspectiveCamera(75, 1, 0.1, 500);
+            fpvCam.position.set(0, 2.0, 5.5);
+            mesh.add(fpvCam);
+
+            droneCams.push({ cam: fpvCam, name: `DRONE 0${i + 1} FPV` });
+
+            drones.push({
+                mesh, beacon,
+                baseY: 35 + i * 1.5,
+                phase: Math.random() * Math.PI * 2,
+                target: new THREE.Vector3(0, 35 + i * 1.5, 0),
+                hasFix: false,
+                serverLat: null, serverLon: null, serverId: null, publicKey: null,
+            });
+        }
+
+        // ---------- Grid slots ----------
+        const slots = [
+            { kind: 'camera', cam: globalCam, name: 'GLOBAL OVERWATCH' },
+            { kind: 'camera', ...droneCams[0] },
+            { kind: 'camera', ...droneCams[1] },
+            { kind: 'telemetry' },
+            { kind: 'camera', ...droneCams[2] },
+            { kind: 'camera', ...droneCams[3] },
+        ];
+
+        // ---------- Renderer ----------
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setScissorTest(true);
+        document.body.appendChild(renderer.domElement);
+
+        const telemetryPanel = document.getElementById('telemetry');
+        const labelsContainer = document.getElementById('labels');
+        slots.forEach((slot, i) => {
+            if (slot.kind !== 'camera') return;
+            const el = document.createElement('div');
+            el.className = 'cam-label';
+            el.id = `label-${i}`;
+            el.innerText = slot.name;
+            labelsContainer.appendChild(el);
+        });
+
+        // ---------- Consensus poller ----------
+        async function pollNode() {
+            try {
+                // Plain GET — the tashi node's state endpoint doesn't need a payload.
+                const res = await fetch(NODE_URL);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const json = await res.json();
+                const records = json.drones || [];
+
+                feed.online = true;
+                feed.lastPollMs = performance.now();
+                feed.nodeId = json.nodeId ?? '—';
+                feed.analyst = json.analyst ?? null;
+
+                // Records come pre-sorted by pubkey from the server, so the mapping
+                // pubkey→slot is stable across polls AND across nodes.
+                records.forEach((rec, i) => {
+                    if (i >= drones.length) return;
+                    const { x, z } = latLonToWorld(rec.latitude, rec.longitude);
+                    const d = drones[i];
+                    d.target.set(x, d.baseY, z);
+                    if (!d.hasFix) {
+                        d.mesh.position.set(x, d.baseY, z);
+                        d.hasFix = true;
+                    }
+                    d.serverLat = rec.latitude;
+                    d.serverLon = rec.longitude;
+                    d.serverId = rec.id;
+                    d.publicKey = rec.publicKeyHex;
+                });
+            } catch (e) {
+                feed.online = false;
+                console.warn('Node poll failed:', e.message);
+            }
+        }
+        pollNode();
+        setInterval(pollNode, POLL_INTERVAL_MS);
+
+        // ---------- Main loop ----------
+        const LERP_XZ = 0.05;
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const t = clock.getElapsedTime();
+
+            drones.forEach((d, i) => {
+                if (!d.hasFix) return;
+
+                d.mesh.position.x += (d.target.x - d.mesh.position.x) * LERP_XZ;
+                d.mesh.position.z += (d.target.z - d.mesh.position.z) * LERP_XZ;
+
+                const targetY = d.baseY + Math.sin(t * 0.8 + d.phase) * 1.5;
+                d.mesh.position.y += (targetY - d.mesh.position.y) * 0.05;
+
+                const dx = d.target.x - d.mesh.position.x;
+                const dz = d.target.z - d.mesh.position.z;
+                if (Math.hypot(dx, dz) > 0.05) {
+                    d.mesh.lookAt(
+                        d.mesh.position.x + dx,
+                        d.mesh.position.y,
+                        d.mesh.position.z + dz
+                    );
+                }
+                d.beacon.intensity = 1.0 + Math.sin(t * 6 + i) * 0.8;
+            });
+
+            // ---------- Telemetry HUD ----------
+            const ageSec = ((performance.now() - feed.lastPollMs) / 1000).toFixed(1);
+            const statusClass = feed.online ? 'status-ok' : 'status-bad';
+            const statusText = feed.online
+                ? `ONLINE (observing Node ${feed.nodeId}, last fix ${ageSec}s ago)`
+                : `OFFLINE — no response from ${NODE_URL}`;
+
+            let rows = `<b>[ PROJECT VANGUARD TELEMETRY ]</b><br>`;
+            rows += `<span class="${statusClass}">LINK: ${statusText}</span><br>`;
+
+            if (feed.analyst) {
+                rows += `<div class="analyst">🧠 ${feed.analyst}</div>`;
+            } else {
+                rows += `<br>`;
+            }
+
+            drones.forEach((d, i) => {
+                if (d.serverLat === null) {
+                    rows += `UNIT 0${i + 1}  — awaiting consensus fix —<br>`;
+                    return;
+                }
+                const pk = d.publicKey ? d.publicKey.slice(0, 10) + '…' : '—';
+                rows += `UNIT 0${i + 1}  LAT ${d.serverLat.toFixed(6)}  LON ${d.serverLon.toFixed(6)}<br>`;
+                rows += `&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; pubkey ${pk}<br>`;
+            });
+
+            telemetryPanel.innerHTML = rows;
+
+            // ---------- Render the 3x2 grid ----------
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            const viewW = Math.floor(w / 3);
+            const viewH = Math.floor(h / 2);
+
+            slots.forEach((slot, i) => {
+                const col = i % 3;
+                const row = Math.floor(i / 3);
+                const left = col * viewW;
+                const top = row * viewH;
+                const bottom = h - (row + 1) * viewH;
+
+                if (slot.kind === 'camera') {
+                    const label = document.getElementById(`label-${i}`);
+                    if (label) {
+                        label.style.left = `${left + 6}px`;
+                        label.style.top = `${top + 6}px`;
+                    }
+                    renderer.setViewport(left, bottom, viewW, viewH);
+                    renderer.setScissor(left, bottom, viewW, viewH);
+                    slot.cam.aspect = viewW / viewH;
+                    slot.cam.updateProjectionMatrix();
+                    renderer.render(scene, slot.cam);
+                } else if (slot.kind === 'telemetry') {
+                    telemetryPanel.style.left = `${left}px`;
+                    telemetryPanel.style.top = `${top}px`;
+                    telemetryPanel.style.width = `${viewW}px`;
+                    telemetryPanel.style.height = `${viewH}px`;
+                }
+            });
+        }
+
+        window.addEventListener('resize', () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
